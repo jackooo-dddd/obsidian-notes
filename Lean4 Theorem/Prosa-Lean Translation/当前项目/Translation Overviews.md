@@ -169,12 +169,7 @@ forall a b : nat,
 `CERTIFIED_WITH_PROP_SPROP_FOUNDATION`但不能有未记录的额外公理。
 
 #### 防止 LLM 作弊式通过
-- 防止certificate 通过了，却没有真正证明 translation correspondence
-要证明：
-```
-forall a b,
-  bridge (original_add a b) = imported_add (bridge a) (bridge b).
-```
+`证明 forall a b, bridge (original_add a b) = imported_add (bridge a) (bridge b).`
 如果允许任意假设，LLM 可能直接引入：
 ```
 Axiom add_corresponds :
@@ -183,8 +178,9 @@ Axiom add_corresponds :
     =
     imported_add (bridge a) (bridge b).
 ```
-然后`exact add_corresponds a b.` certificate 会编译通过，但这显然没有验证任何东西。所以这些检查分别是在堵不同的漏洞.
-1) `semantic premises = []` 防止把真正要证明的语义对应偷偷塞进 theorem 参数里，相当于假设correspondence成立：, 例如：
+然后`exact add_corresponds a b.` certificate 会编译通过，但这显然没有验证任何东西。所以这些检查是在堵不同的漏洞.
+###### `semantic premises = []` 
+- `semantic premises = []` means the certificate does not assume the semantic correspondence that it is supposed to prove.
 ```
 	Theorem add_correspondence
 	  (H :
@@ -201,67 +197,28 @@ Axiom add_corresponds :
 	  exact H.
 	Qed.
 ```
-- `semantic_premises` 必须额外检查certificate theorem statement， 看哪些只是 foundation premises，哪些实际上已经包含待证明 semantic fact
+- 没有真正证明 correspondence，只是把desired semantic correspondence as an assumption 塞进去了。
 
-2) `source theorem dependency = false` 防止调用原 Rocq 已存在的目标 theorem
-- 假设原始 Rocq 有 Theorem original_big_nat_eq0
-- Lean 翻译回来有对应的Imported_big_nat_eq0， 现在想证明它们 correspondence。
- 错误做法：
-```
-Theorem big_nat_eq0_certificate : ... .
-Proof.
-  ...
-  exact original_big_nat_eq0.
-Qed.
-```
-- 检查逻辑：certificate proof term → 计算 dependency closure → 有没有 source theorem constant
-
-3) `target theorem dependency = false` 防止直接调用 imported Lean 那边对应的 theorem。例如本来要验证`original_theorem ↔ imported_theorem`, 却直接写`apply imported_theorem.` 这种就失去了验证意义。
-假设 imported Lean 里已经有`Imported_big_nat_eq0 :...`
-LLM 可能写
-```
-Theorem big_nat_eq0_certificate : ...
-Proof.
-  ...
-  apply Imported_big_nat_eq0.
-Qed.
-```
-然后 certificate PASS。但本来就是在检查Lean 翻译出来的 `big_nat_eq0`是否和原始 Rocq `big_nat_eq0 `对应, 结果直接拿 Lean theorem 本身作为证明依据。
-dependency audit 会看到`certificate depends on Imported_big_nat_eq0`
-于是`target theorem self-dependency = true`, reject
-```
-                    certificate
-                        │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-original theorem?              imported theorem?
-          │                           │
-        NO                          NO
-
-source dep = false          target dep = false
-```
+`source theorem` = **原始 Prosa / 原始 Rocq 里的 theorem**
+`target theorem` = **Lean 翻译后，再 import 回 Rocq 的 theorem**
+###### `source theorem dependency = false`
+- certificate 的证明不能依赖原始 Rocq 已经证明好的 theorem proof
+###### `target theorem dependency = false` 
+- certificate 的证明不能依赖 imported Lean 那边已经存在的theorem proof
 - certificate 应该依赖的是更底层的`Nat correspondence, List correspondence, add correspondence, comparison correspondence...`然后自己推导出当前 theorem correspondence。
-4) `unexpected assumptions = []`用来检查`Axiom, Admitted, Parameter, 未批准的 Prop/SProp bridge, statement-only exported theorem, 其他全局假设`有没有混进 proof dependency。
-- 这一项最接近`Print Assumptions certificate_name.`
-假设 LLM 偷偷写：
+
+###### `unexpected assumptions = []`
+ 检查`Axiom, Admitted, Parameter, 未批准的 Prop/SProp bridge, statement-only exported theorem, 其他全局假设`有没有混进 proof dependency。
 ```
+假设 LLM 偷偷写
 Axiom magic_add :
-  forall a b,
-    toImported (original_add a b)
-    =
-    imported_add (toImported a) (toImported b).
-```
-然后：
-```
+  forall a b, toImported (original_add a b)
+    = imported_add (toImported a) (toImported b).
+然后   
 Theorem add_correspondence : ...
 Proof.
   exact magic_add.
 Qed.
 ```
-certificate 编译`PASS`。 但`Print Assumptions add_correspondence.`会暴露类似：
-`Axioms:magic_add :forall a b, ...`, classifier 就得到：
-`unexpected_assumptions = [magic_add]` 然后 reject。
+- `Print Assumptions add_correspondence.`会暴露类似`Axioms:magic_add :forall a b, ...`, classifier 就会看见`unexpected_assumptions = [magic_add]` 
 - 在当前的设计里，不是所有 assumption 都一刀切。例如` Time certificate` 里面 importer 的`Lean.eq definitional UIP`, 被明确分类成`ALLOWED_IMPORTER_FOUNDATION`,  不会进入unexpected assumptions
-
-`certificate compile PASS`只说明Rocq 接受这个 proof term。
-`semantic premises = [], source dependency = false, target dependency = false, unexpected assumptions = []` 是在说明这个 proof term 不是靠“把答案当前提”“直接引用答案”“偷偷加 axiom”得到的。

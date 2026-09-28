@@ -23,49 +23,17 @@ operator correspondence
 **不能利用 source theorem 和 target theorem 自己已经有 proof 这个事实**，而应该从底层 correspondence 独立推出两边 statement 的 equivalence。
 
 #### 例子：`completion_monotonic`
-假设两边的 theorem statement 分别是：
-```text
-PR :=
-∀ t u,
-  t ≤ u →
-  completed_by_R j t = true →
-  completed_by_R j u = true
-```
+| Layer               | Rocq side                                                              | Lean/imported side                                                     | What correspondence proves                                                |
+| ------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Theorem statement   | `PR`                                                                   | `PL`                                                                   | Goal is to prove $PR \leftrightarrow PL$                                  |
+| Quantified time `t` | `tR`                                                                   | `tL`                                                                   | `tR ~ tL`                                                                 |
+| Quantified time `u` | `uR`                                                                   | `uL`                                                                   | `uR ~ uL`                                                                 |
+| Order condition     | `tR ≤ uR`                                                              | `tL ≤ uL`                                                              | $(tR \le uR) \leftrightarrow (tL \le uL)$                                 |
+| Completion at `t`   | `completed_by_R j tR = true`                                           | `completed_by_L j tL = true`                                           | `completed_by_R j tR ↔ completed_by_L j tL`                               |
+| Completion at `u`   | `completed_by_R j uR = true`                                           | `completed_by_L j uL = true`                                           | `completed_by_R j uR ↔ completed_by_L j uL`                               |
+| Whole theorem       | `∀ t u, t ≤ u → completed_by_R j t = true → completed_by_R j u = true` | `∀ t u, t ≤ u → completed_by_L j t = true → completed_by_L j u = true` | Combine the lower-level correspondences to derive $PR \leftrightarrow PL$ |
 
-```text
-PL :=
-∀ t u,
-  t ≤ u →
-  completed_by_L j t = true →
-  completed_by_L j u = true
-```
-
-一个有意义的 correspondence proof 应该证明
-```text
-tR ~ tL
-uR ~ uL
-   ↓
-(tR ≤ uR) ↔ (tL ≤ uL)
-
-completed_by_R j tR
-        ↔
-completed_by_L j tL
-
-completed_by_R j uR
-        ↔
-completed_by_L j uL
-   ↓
-整个 PR ↔ PL
-```
-
-所以`apply ar_forall_nat_correspondence, apply ar_imp_correspondence, exact (svc_bool_truth_correspondence ...)...`是在按照 theorem statement 的结构，一层一层证明:
-```text
-forall correspondence
-→ implication correspondence
-→ operator correspondence
-→ predicate correspondence
-→ whole theorem correspondence
-```
+所以`apply ar_forall_nat_correspondence, apply ar_imp_correspondence, exact (svc_bool_truth_correspondence ...)...`是在按照 theorem的结构进行correspondence证明
 #### 为什么 PR、PL 都是 theorem 仍然可以验证？
 一个 theorem 可以分成statement和proof
 ```text
@@ -80,44 +48,9 @@ proof:
 ```
 correspondence 验证真正比较的是`statement_R  vs  statement_L`
 而不是使用`completion_monotonic_R, completion_monotonic_L` 本身作为 proof 来构造 equivalence。
-因此这两个 audit 条件非常关键：
-```text
-source_theorem_dependency = false
-target_theorem_dependency = false
-```
-它们表示 certificate 没有依赖左右 theorem 已经被证明这个事实来制造$PR \leftrightarrow PL$
 
-## 核心区别
-
-```text
-情况 A：平凡 equivalence
-
-PR 已证明
-PL 已证明
-   ↓
-PR ↔ PL
-
-没有验证语义结构
-```
-
-```text
-情况 B：有验证意义的 correspondence
-
-PR 的内部结构
-   ↓
-底层 correspondence
-   ↓
-PL 的内部结构
-   ↓
-PR ↔ PL
-
-真正验证 translation correspondence
-```
-
-所以，**仅仅看到 `PR ↔ PL` 这个结论还不够，还必须检查这个 equivalence 是怎么证明出来的。**
-
-真正有说服力的标准是：
-
+**仅仅看到 `PR ↔ PL` 这个结论还不够，还必须检查这个 equivalence 是怎么证明出来的。**
+有说服力的标准是：
 $$
 \boxed{
 \begin{aligned}
@@ -127,4 +60,5 @@ $$
 }
 $$
 
-这也是 `source_theorem_dependency = false` 和 `target_theorem_dependency = false` 在 certificate 中非常重要的原因。
+为了不依赖source theorem proof 和 target theorem proof，`source_theorem_dependency = false` 和 `target_theorem_dependency = false` 是两个非常关键的 audit 条件。
+- 它们表示 certificate 在证明 $PR \leftrightarrow PL$ 时，没有直接依赖 source theorem 或 target theorem 已经存在的 proof，而是通过底层的 correspondence 独立推出两边statement 的对应关系。
