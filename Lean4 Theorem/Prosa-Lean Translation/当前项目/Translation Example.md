@@ -103,7 +103,8 @@ Validation/.work/foundation_slice_1.XXXXXX/
 └── certificates/
     └── FoundationTimeCertificate.v
 ```
-- `Rocq nat`和`Lean Nat 导入 Rocq 后的 Nat`不是同一个datatype。证明往返不变需要定义两个函数`rocq_nat_to_imported : nat -> Nat`, `imported_nat_to_rocq : Nat -> nat`
+#### Datatype Correspondence
+`Rocq nat`和`Lean Nat 导入 Rocq 后的 Nat`不是同一个datatype。证明往返不变需要定义两个函数`rocq_nat_to_imported : nat -> Nat`, `imported_nat_to_rocq : Nat -> nat`
 ```
 	forall n : nat, (* nat is for Rocq *)
 	  imported_nat_to_rocq (rocq_nat_to_imported n) = n.

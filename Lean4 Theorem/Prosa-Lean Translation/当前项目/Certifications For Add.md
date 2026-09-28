@@ -1,4 +1,3 @@
-理想的 accept 结果
 ```
 Declaration:
   original add ↔ imported add
@@ -27,5 +26,3 @@ unexpected assumptions:
 certificate compile:
   PASS
 ```
-
-那么就可以接受为`CERTIFIED`
