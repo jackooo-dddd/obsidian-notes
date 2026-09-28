@@ -11,7 +11,6 @@ Definition duration := nat.
 Definition instant := nat.
 ```
 这个文件不是 Codex 生成的，而是从固定的 Prosa v0.6 commit里copy 进 run directory，而且脚本会检查 SHA256，不一致就直接失败。
-
 ### 翻译后的 Lean文件
 ```
 Prosa-Shunqi/
@@ -69,13 +68,12 @@ Lean Import "Time.out".
 - 原来 Lean 里的`Prosa.Behavior.Time.instant,`会在 Rocq environment 里出现一个对应的 imported declaration，例如`Prosa_Behavior_Time_instant`
 - 然后 `ImportedTime.v` 被 Rocq 编译, 生成`ImportedTime.vo`, 它是Rocq 编译产物，类似前面 Lean 的 `.olean`。
 - 正式验证时会加载原始 Prosa v0.6。于是同一个 Rocq environment 里同时存在原始 Prosa declaration和`翻译后的 Lean → export → import declaration
-**Lean 4 的 `Nat` 导进 Rocq 后**，它不是 Rocq 自带的 `nat`，而是 importer 新建的一个独立 inductive type。结合 `rocq-lean-import` 官方的导入规则和 Lean 4 导入实例，实际形态就是：
+**Lean 4 的 `Nat` 导进 Rocq 后**，它不是 Rocq 自带的 `nat`，而是 importer 新建的inductive type。
 ```
 Inductive Nat : Set :=
 | Nat_zero : Nat
 | Nat_succ : Nat -> Nat.
 ```
-- `rocq-lean-import` 官方 README 明确说明：Lean inductive 会被翻成 Rocq inductive，而且 `.` 会被换成 `_`。
 ```
 Original Rocq       ⇒       Lean        ⇒      Lean Imported Rocq
 ────────────────            ──────────          ─────────────────
@@ -83,122 +81,89 @@ Inductive nat : Set :=       inductive nat       Inductive Nat : Set :=
 | O : nat                    | zero : nat        | Nat_zero : Nat
 | S : nat -> nat.            | succ n : nat      | Nat_succ : Nat -> Nat.
 ```
-- `nat : Set， Nat : Set`, **类型层级一样，结构也一样，但不是同一个 inductive declaration**。
-- Rocq 不会因为它们“长得一样”就自动认为`nat = Nat`. 所以你们才需要`rocq_nat_to_imported : nat -> Nat`
-- 所以后面才需要：`rocq_nat_to_imported`, `imported_nat_to_rocq`这样的bridge，用来证明` Rocq instant == Imported Lean instant`
-`ImportedTime.vo` 并不是把 Lean 源代码翻译回原来的 Prosa，而是让 Lean 中实际编译出来的 declarations 以 Rocq declarations 的形式存在，这样才能在 Rocq 内部正式证明它与原始 Prosa declaration 对应。
-- After `Rocq + rocq-lean-import`, `ImportedTime.v` becomes `ImportedTime.vo`
-- 现在 **Lean 的 `instant` 已经变成一个 Rocq environment 中的 declaration** `Prosa_Behavior_Time_instant`
-
-#### 如何看到导入Rocq后的文件
-不一定能在某个 `.v` 文件里直接看到一段完整的
-```
-Inductive Nat : Set :=
-| Nat_zero : Nat
-| Nat_succ : Nat -> Nat.
-```
-因为在这个流程里，`Nat` 是这句`Lean Import "Time.out".` 在编译 `ImportedTime.v` 的过程中，由 `rocq-lean-import` 动态注册进 Rocq environment 的 declaration。
-在`ImportedTime.v`里面只看到：
-```
-From LeanImport Require Import Lean.
-Lean Import "Time.out".
-```
-不会把所有生成出来的`Inductive Nat ...Definition ...`重新展开写成普通 Rocq source。
-而`ImportedTime.vo`里面确实包含编译后的这些 imported declarations，但 `.vo` 是二进制编译产物，不适合直接打开看源码。
-
-最准确的办法：让 Rocq 自己 `Print`。 新建一个临时文件，例如
+- `nat : Set， Nat : Set`, **类型层级一样，结构也一样，但不是同一个 inductive declaration**。所以需要`rocq_nat_to_imported`, `imported_nat_to_rocq`这样的bridge，用来证明` Rocq instant == Imported Lean instant`
+`ImportedTime.vo` 并不是把 Lean 代码翻译回原来的 Prosa，而是让 Lean 中实际编译出来的 declarations 以 Rocq declarations 的形式存在，这样才能在 Rocq 内部证明它与原始 Prosa对应。
+#### 查看导入Rocq后的文件
+不一定能在某个 `.v` 文件里看到一段完整的翻译`Inductive Nat : Set :=.....` 
+ - `Nat` 是`Lean Import "Time.out".` 在编译 `ImportedTime.v` 的过程中，由 `rocq-lean-import` 动态注册进 Rocq environment 的 declaration。
+- 在`ImportedTime.v`里面只看到`From LeanImport Require Import Lean. 和 Lean Import "Time.out".`
+- `ImportedTime.vo`里面确实包含编译后的这些 imported declarations，但 `.vo` 是二进制编译产物，不适合直接打开看源码。
+最准确的办法是让 Rocq 自己 `Print`。`Print` 就是查看已经存在于 environment 中 declaration 的标准方法。 新建一个临时文件`PrintImportedNat.v`
 ```
 Require Import ImportedTime.
-
 Print Nat.
 Print Nat_zero.
 Print Nat_succ.
 ```
-然后跑`rocq compile PrintImportedNat.v`
-加载 imported module 后`Print Nat.` Rocq 会直接从当前 environment 里把它打印出来。`Print` 就是查看已经存在于 environment 中 declaration 的标准方法。
+然后跑`rocq compile PrintImportedNat.v`. 
 ### certificate
-certificate 的用处是证明两个 datatype 虽然不是同一个类型，但可以无损地来回转换。
+certificate 的用处是证明两个 datatype 可以无损地来回转换。
 ```
 Validation/.work/foundation_slice_1.XXXXXX/
 └── certificates/
     └── FoundationTimeCertificate.v
 ```
-- `原始 Rocq nat`和`Lean Nat 导入 Rocq 后的 Nat`不是同一个 Rocq datatype。
-- 定义两个函数`rocq_nat_to_imported : nat -> Nat`, `imported_nat_to_rocq : Nat -> nat`， 关键的是证明“往返不变”
+- `Rocq nat`和`Lean Nat 导入 Rocq 后的 Nat`不是同一个datatype。证明往返不变需要定义两个函数`rocq_nat_to_imported : nat -> Nat`, `imported_nat_to_rocq : Nat -> nat`
 ```
-	forall n : nat,
+	forall n : nat, (* nat is for Rocq *)
 	  imported_nat_to_rocq (rocq_nat_to_imported n) = n.
-	forall n : Nat,
+	forall n : Nat, (* Nat is for Lean *)
 	  rocq_nat_to_imported (imported_nat_to_rocq n) = n.
 ```
-- `Rocq nat` converted to `Imported Nat` via `rocq_nat_to_imported`. 
-- ``Imported Nat`` converted back to `Rocq nat` via `imported_nat_to_rocq`回到原值, 反方向也一样。
-这说明两个类型之间存在一个很强的 correspondence，可以理解成一个 isomorphism / 双向无损对应。$\iff$ 
+这两个函数说明两个类型之间存在一个很强的 correspondence
 - `Rocq 0 ⇔ Imported Nat_zero`
 - `Rocq S 0 ⇔ Imported Nat_succ Nat_zero`
 - certificate 不是证明`nat 和 Nat identical`, 而是证明`nat ≅ Nat`
-对于Rocq的`Definition instant := nat.` 和 Lean的`abbrev instant := Nat`, certificate就可以借助上面的 bridge 证明`original instant⇔imported Lean instant`
-- 也就是说，任意原始 Prosa 的 instant`t : original instant`, 都可以转成`rocq_nat_to_imported t`, 作为 imported Lean instant 使用，而且可以转回来。
-
-再往后，certificate 会逐层扩展。
-
-比如函数：
-```
-original add
-imported add
-```
-不能只证明 datatype 对应，还要证明` 对应输入 -> 分别运行两边函数 -> 输出仍然对应`
-形式上` toImported (a + b) = imported_add (toImported a) (toImported b)`
-
-对于 proposition / theorem, 则会证明 `原始 proposition 成立 ⇔ imported proposition 成立`, `Original.completed_by(...)↔Imported.completed_by(...)`
-当然前提是里面涉及的`nat, job, schedule, service, cost, comparison, sum`都已经有 correspondence。
-
-`FoundationTimeCertificate.v` 这种文件，本质上是在建立最底层的“语义桥”
-原始 Rocq 世界经过certificate / bridge，会到Imported Lean 世界
-对于 `nat` 这个例子，它证明的是`representation correspondence`, 而不是`type equality`
+- 如果存在两个函数 $f : nat \to Nat$ 和 $g : Nat \to nat$，并且对任意 $n : nat$ 和 $m : Nat$ 都满足 $g(f(n))=n$ 以及 $f(g(m))=m$，那么 $f$ 和 $g$ 互为逆函数，因此 `nat` 和 `Nat` 之间建立了一个bijection，可以写成 $\boxed{nat \cong Nat}$。这里的 $\cong$ 可以理解成“这两个类型在元素层面一一对应”。
+对于Rocq的`Definition instant := nat.` 和 Lean的`abbrev instant := Nat`, certificate可以借助 bridge 证明`original instant ⇔ imported Lean instant`
+-  `Prosa 的 instant t`可以转成`rocq_nat_to_imported t`, 作为 imported Lean instant 使用。
+#### 函数certificate：
+证明 `original add 和 imported add` 对应
+- ` 任意输入 -> 分别运行两边函数 -> 输出仍然对应`
+- 对于任何a和b, ` toImported (a + b) = imported_add (toImported a) (toImported b)`
+#### proposition / theorem certificate 
+证明 `原始 proposition 成立 ⇔ imported proposition 成立`,
+- 通过其中类型、运算、参数等的对应，建立整个命题的对应
+#### certificate文件
+`FoundationTimeCertificate.v` 在建立最底层的语义桥
 - certificate 证明“原始 Rocq declaration”和“从 Lean 实际 artifact 导回来的 declaration”在一个明确的 bridge 下具有相同语义。
-- 整个验证最终不是在看两边代码长得一样吗？而是在问：
-	```
-	两边虽然 representation 不一样，
-	但是否对所有对应输入表现一致，
-	并且这种对应能被 Rocq 正式证明？
-	```
+- 整个验证最终不是在看两边代码长得一样吗？而是在问两边虽然 representation 不一样，但是否对所有对应输入表现一致，并且这种对应能被 Rocq 正式证明？
+#### Example: Correspondence between 2 functions
+`original add` 和 `imported add`
+```
+是什么              Original Rocq              Imported Lean
+────────────────   ─────────────────────      ─────────────────────
 
-|声明种类|需要证明的对应|
-|---|---|
-|类型，例如 `nat`|两边的值可以双向转换，而且往返不改变值|
-|函数，例如 `add`|对应的输入，经过两边函数后，得到对应的输出|
-|命题／定理|通过其中类型、运算、参数等的对应，建立整个命题的对应|
+自然数类型          nat                        Nat
 
-#### Correspondence Accept
-如何说明Correspondence在两个函数之间建立。
-Consider 函数`original add` 和 `imported add`
+自然数 0            O                          Nat_zero
+
+后继 (+1)           S                          Nat_succ
+
+加法类型            original_add :             imported_add :
+                    nat → nat → nat            Nat → Nat → Nat
+
+0 + b = b           original_add O b := b       imported_add Nat_zero b := b
+
+(a+1)+b=(a+b)+1     original_add (S a) b :=     imported_add (Nat_succ a) b :=
+                      S (original_add a b)        Nat_succ (imported_add a b)
+```
+ validator accept Correspondence的条件：
+(1) 两边 declaration 必须确定. source 真的是 official Prosa v0.6 的 `add`， target 真的是 fresh compiled Lean artifact 导回来的 `imported add`. 不能拿旧 `.olean`、旧 `.out`
+(2) 输入和输出类型已经有 bridge
+- ` original nat ↔ imported Nat`的Correspondence已被证明
+(3) 函数语义 correspondence 必须被正式证明  
 ```
 forall a b : nat,
   rocq_nat_to_imported (original_add a b)
-  =
-  imported_add
+  =imported_add
     (rocq_nat_to_imported a)
     (rocq_nat_to_imported b).
 ```
-对于现在的 validator， accept 条件有 5 个：
-(1) 两边 declaration 必须确定
-- source 真的是 official Prosa v0.6 的 `add`， target 真的是 fresh compiled Lean artifact 导回来的 `imported add`
-- 不能拿错 declaration、旧 `.olean`、旧 `.out`
-(2) 输入和输出类型必须已经有 bridge
-- ` original nat ↔ imported Nat`的Correspondence已被证明
-(3) **函数语义 correspondence 必须被正式证明**  
-```
-forall a b,
-  toImported (original_add a b)
-  =
-  imported_add (toImported a) (toImported b).
-```
-- 这个theorem才是`add` correspondence 的主体, 必须被证明成立。
-(4)不能依赖验证的 theorem 本身  
+- 这个theorem才是`add` correspondence 的主体。
+(4)不能依赖验证的 theorem 本身以及assumption boundary 必须符合规则
 - 对 `add` 来说，就是 certificate 不能通过直接引用一个已经假定`original_add corresponds imported_add`的 theorem 来完成证明。
-(5) assumption boundary 必须符合规则
-比较理想的 accepted 状态: [[Certifications For Add]]
+- 比较理想的 accepted 状态: [[Certifications For Add]]
 如果用了允许的基础 bridge，例如 Prop/SProp foundation，则状态可能是：
 `CERTIFIED_WITH_PROP_SPROP_FOUNDATION`但不能有未记录的额外公理。
 

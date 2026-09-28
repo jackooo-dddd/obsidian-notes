@@ -1,4 +1,4 @@
-最理想的 accept 结果就是
+理想的 accept 结果
 ```
 Declaration:
   original add ↔ imported add
