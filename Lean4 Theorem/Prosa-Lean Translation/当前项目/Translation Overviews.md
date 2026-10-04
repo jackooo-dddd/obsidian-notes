@@ -164,8 +164,7 @@ forall a b : nat,
 - 这个theorem才是`add` correspondence 的主体。
 (4)不能依赖验证的 theorem 本身以及assumption boundary 必须符合规则
 - 对 `add` 来说，就是 certificate 不能通过直接引用一个已经假定`original_add corresponds imported_add`的 theorem 来完成证明。
-- 比较理想的 accepted 状态: [[Certifications For Add]]
-如果用了允许的基础 bridge，例如 Prop/SProp foundation，则状态可能是：
+如果用了允许的 bridge，例如 `Prop/SProp` foundation，则状态是：
 `CERTIFIED_WITH_PROP_SPROP_FOUNDATION`但不能有未记录的额外公理。
 
 #### 防止 LLM 作弊式通过
