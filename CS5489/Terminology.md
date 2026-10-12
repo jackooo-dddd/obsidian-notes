@@ -1,0 +1,2 @@
+- Sparse Weights（稀疏权重）大部分权重为 0，只有少部分权重非零。
+- Support Vector: Support 的是 decision boundary

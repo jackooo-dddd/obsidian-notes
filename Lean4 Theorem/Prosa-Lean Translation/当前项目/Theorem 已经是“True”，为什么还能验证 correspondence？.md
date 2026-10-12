@@ -1,4 +1,4 @@
-如果已经有`PR is proved AND PL is proved`, 或者`hR : PR, hL : PL`, 那么可以很“平凡”地证明`PR <-> PL`
+如果已有`PR is proved AND PL is proved`, 或者`hR : PR, hL : PL`, 那么显然 `PR <-> PL`
 ```coq
 Theorem bad_correspondence : PR <-> PL.
 Proof.
@@ -7,8 +7,7 @@ Proof.
   - intro _. exact hR.
 Qed.
 ```
-- 这里 `PR -> PL` 根本没有利用 `PR`，只是直接返回已经存在的 `hL`；反方向也一样。所以虽然形式上得到了$PR \leftrightarrow PL$.  但这个证明没有说明 PR 和 PL 的结构或语义存在对应关系。更准确地说，并不是 `PR` 这个 proposition “等于 True”，而是因为它已经有 proof，所以我们已经知道它成立。
-
+- 这里 `PR -> PL` 根本没有利用 `PR`，只是直接返回已经存在的 `hL`；反方向也一样。所以虽然形式上得到了$PR \leftrightarrow PL$.  但这个证明没有说明 PR 和 PL 的结构或语义存在对应关系。
 #### 真正需要验证的是什么？
 ```text
 parameter correspondence
@@ -21,7 +20,6 @@ operator correspondence
       PR ↔ PL
 ```
 **不能利用 source theorem 和 target theorem 自己已经有 proof 这个事实**，而应该从底层 correspondence 独立推出两边 statement 的 equivalence。
-
 #### 例子：`completion_monotonic`
 | Layer               | Rocq side                                                              | Lean/imported side                                                     | What correspondence proves                                                |
 | ------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |

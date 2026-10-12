@@ -1,0 +1,1 @@
+对于 **datatype**，如果两边不能要求完全相等，一个标准的放宽方式就是要求它们 **同构（isomorphic）**。两个类型 $A$ 和 $B$ 同构，记作 $A \cong B$，意思是存在两个函数 $to : A \to B$ 和 $from : B \to A$，并且它们互为逆函数，即 $to \circ from = id_B$、$from \circ to = id_A$。直观上，这表示 $A$ 和 $B$ 虽然不是同一个 datatype，但它们的元素可以一一对应地相互转换，而且来回转换后不会丢失任何信息。
