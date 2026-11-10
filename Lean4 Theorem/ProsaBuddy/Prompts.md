@@ -108,7 +108,7 @@ Use explicit tactics
 ```
 
 ### fixer.txt
-**`fixer` 在其他 agent 已经写了一段证明、Rocq compiler/LSP/tactic 报出了一个具体错误以后，把**错误信息 + 出错代码 + 当前 goal + local context + 已尝试的方法**交给 fixer。fixer 只诊断这个错误的根因，做**最小局部修改**，然后重新调用 Rocq 工具验证；如果发现必须改 theorem structure、import 或 proof architecture，就停止并 escalate。
+**`fixer`** 在其他 agent 已经写了一段证明、Rocq compiler/LSP/tactic 报出了一个具体错误以后，把**错误信息 + 出错代码 + 当前 goal + local context + 已尝试的方法**交给 fixer。fixer 只诊断这个错误的根因，做**最小局部修改**，然后重新调用 Rocq 工具验证；如果发现必须改 theorem structure、import 或 proof architecture，就停止并 escalate。
 
 现在fixer报错的Error message都是Rocq里面的，我们要把它换成Lean里面的报错信息
 ```

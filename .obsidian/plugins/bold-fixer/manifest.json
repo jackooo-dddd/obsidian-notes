@@ -1,0 +1,9 @@
+{
+  "id": "bold-fixer",
+  "name": "Bold Fixer",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "自动修复因标点导致渲染不出来的 **粗体**（粘贴时、文件被外部修改时、离开笔记时）。",
+  "author": "local",
+  "isDesktopOnly": false
+}

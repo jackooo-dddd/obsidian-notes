@@ -62,7 +62,7 @@ Because natural numbers are defined recursively (0, and the successor of a numbe
 ###### Branch B: The Inductive Case
 **Context:** We now have `n` (the current number) and the **Induction Hypothesis (IHn)**: `n + 0 = n`. (This is our assumption that the theorem holds true for `n`). **Goal:** `S n + 0 = S n`
 Here is how the three tactics resolve this goal:
-**Step 1: `simpl
+**Step 1: `simpl`**
 - **Goal before:** `S n + 0 = S n`
 - **How `simpl` works:** Rocq looks at the left side (`S n + 0`). According to the recursive definition of addition, adding 0 to a successor `S n` results in `S (n + 0)`. Rocq computes this reduction.
 - **Goal after:** `S (n + 0) = S n`

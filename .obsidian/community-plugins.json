@@ -1,5 +1,9 @@
 [
-  "multi-column-markdown",
   "dataview",
-  "obsidian-git"
+  "obsidian-git",
+  "clean-ai-paste",
+  "codeblock-customizer",
+  "shiki-highlighter",
+  "bold-fixer",
+  "realclaudian"
 ]

@@ -1,0 +1,29 @@
+/* 去掉表格上方的空行高度 */
+.cm-line:has(+ .cm-embed-block.cm-table-widget) {
+    line-height: 0.1em !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* 去掉表格自身的上下间距 */
+.cm-embed-block.cm-table-widget.markdown-rendered {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* 缩小表格下方空行的高度 */
+.cm-embed-block.cm-table-widget + .cm-line:has(> br) {
+    line-height: 0.1em !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* 阅读模式中的表格间距 */
+.markdown-reading-view table {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}

@@ -1,2 +1,19 @@
 - Sparse Weights（稀疏权重）大部分权重为 0，只有少部分权重非零。
 - Support Vector: Support 的是 decision boundary
+- L2 本质上就是 Square（二次方），因此数值越大，惩罚增长得越快。L1/L2 描述的是惩罚的数学形式，不是惩罚的对象。惩罚的是 Error 还是 Weight，取决于公式中被取绝对值或平方的是什么。
+- L1 在 0 处不可微，不一定让 Optimization 更容易
+- Learning Rate 不一定需要固定，也可以使用 Learning Rate Decay
+- Bayesian Classifier 需要获得 Posterior P(y | x) 来分类
+- What will change the Classifier's behavior: 1) weights 2) threshold 
+- Linear regression model-> introduce non linear features / non linear classifiers 
+- A generative model learns how image features are generated for each class, while a discriminative classifier directly discriminates the classes apart using image features.  
+	- Discrimative model is easier to setup since we don’t need to model the underlying probability  distributions.  
+	- Generative model will be better if there are not a lot of data
+- Linear / Nonlinear
+	- Logistic Regression 和 Linear SVM 都属于 **Linear Classifier**，因为它们在原始 Feature Space 中的 Decision Boundary 满足 $w^Tx+b=0$，是一条直线或 Hyperplane。Linear Regression 则属于 **Linear Regressor**，其预测函数为 $\hat y=w^Tx+b$，用于预测连续数值，而不是分类。
+	- Kernel SVM（RBF）属于 **Nonlinear Classifier**，因为它可以在原始 Feature Space 中产生非线性的 Decision Boundary；Kernel SVR（RBF）属于 **Nonlinear Regressor**，可以学习非线性的预测函数。Neural Network 在使用非线性 Activation Functions 时通常也是 Nonlinear Model。
+	- 需要注意，这些结论默认使用原始 Features；如果先进行 Polynomial Feature Transformation，即使使用 Logistic Regression 或 Linear Regression，也可以在原始 Input Space 中产生非线性的 Decision Boundary 或 Regression Function。
+- If the slope first decreases and then increases, or first increases and then decreases, the function is Non-convex. 
+	- Non-convex functions are harder to optimize because they may contain multiple Local Minima, making it difficult for optimization algorithms like Gradient Descent to find the Global Minimum. However, being Non-convex does not necessarily mean multiple Local Minima exist.
+- To improve the performance of a Naive Bayes classifier, we can: 1) choose a more appropriate probability distribution, such as Multinomial Naive Bayes for text classification; 2) use N-gram features with Bag-of-Words to capture more word patterns; 3) apply text preprocessing, such as tokenization, lowercasing, and removing unnecessary words; 4) tune hyperparameters, such as the Laplace smoothing parameter; 5) adjust the vocabulary size to remove irrelevant or rare words; and 6) use TF-IDF instead of raw word counts to better represent the importance of words.
+- Naive Bayes Gaussian classifier 1) Assumptions, CCD of feature x is assumed to be Gaussian, features are independent, samples are IID
