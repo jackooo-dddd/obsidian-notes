@@ -2,5 +2,6 @@
   "enabledCssSnippets": [
     "table-spacing",
     "claude-chat-style"
-  ]
+  ],
+  "showRibbon": true
 }

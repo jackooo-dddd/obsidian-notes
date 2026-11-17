@@ -32,14 +32,19 @@
   --code-radius: 6px;
   --code-background: rgba(0, 0, 0, 0.2);
 
-  /* 表格：细边框、表头底色 */
+  /* 表格：Claude 风格，只有横线，没有竖线和表头底色 */
   --table-border-width: 1px;
   --table-border-color: var(--background-modifier-border);
-  --table-header-background: var(--background-secondary);
+  --table-header-border-width: 1px;
+  --table-header-border-color: var(--background-modifier-border);
+  --table-column-first-border-width: 0;
+  --table-column-last-border-width: 0;
+  --table-row-last-border-width: 0;
+  --table-header-background: transparent;
+  --table-header-background-hover: transparent;
+  --table-row-alt-background: transparent;
+  --table-row-background-hover: transparent;
   --table-header-weight: 600;
-  --table-row-background-hover: var(--background-secondary-alt);
-  --table-cell-padding-x: 10px;
-  --table-cell-padding-y: 6px;
 
   /* 分割线 */
   --hr-color: var(--background-modifier-border);
@@ -70,15 +75,63 @@
   margin: 8px 0;
 }
 
-/* 表格：占满宽度，单元格自动换行 */
+/* 表格：Claude 风格
+ * - 占满宽度，单元格自动换行
+ * - 没有外框和竖线，只在行与行之间画一条细横线，最后一行下面不画
+ * - 表头加粗、没有底色；没有斑马纹和悬停底色
+ * - 第一列左边不留空，和正文左对齐；列之间靠右侧留白隔开 */
 :is(.markdown-preview-view, .markdown-source-view) table {
   width: 100%;
   border-collapse: collapse;
+  border: none;
 }
 :is(.markdown-preview-view, .markdown-source-view) :is(th, td) {
   text-align: start;
   white-space: normal;
   overflow-wrap: anywhere;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: transparent;
+  padding: 9px 20px 9px 0;
+  vertical-align: top;
+}
+:is(.markdown-preview-view, .markdown-source-view) th {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+:is(.markdown-preview-view, .markdown-source-view) tbody tr:last-child td {
+  border-bottom: none;
+}
+:is(.markdown-preview-view, .markdown-source-view) :is(tr, tr:nth-child(even), tr:hover) > :is(th, td) {
+  background: transparent;
+}
+/* 表格占满整行宽度：多出来的宽度分到各列之间，列间隔才会像 Claude 一样大。
+ * Obsidian 自带样式优先级更高，所以这里用 !important */
+.markdown-rendered table,
+.markdown-source-view.mod-cm6 .cm-table-widget .table-wrapper,
+.markdown-source-view.mod-cm6 .cm-table-widget table {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+}
+.markdown-source-view.mod-cm6 .cm-table-widget .table-wrapper {
+  display: block !important;
+  padding-left: 0 !important;
+}
+/* 阅读视图：第一列不留左边距，列之间靠右侧留白 */
+.markdown-rendered :is(th, td) {
+  padding: 9px 24px 9px 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+/* 编辑视图（Live Preview）：内边距在 .table-cell-wrapper 上 */
+.markdown-source-view.mod-cm6 .cm-table-widget :is(th, td) {
+  padding: 0 !important;
+}
+.markdown-source-view.mod-cm6 .cm-table-widget .table-cell-wrapper {
+  padding: 9px 24px 9px 0 !important;
 }
 
 /* 粗体略收，和对话里的强调一致 */
