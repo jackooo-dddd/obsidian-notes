@@ -1,31 +1,6 @@
 # 要建模 Lean 的哪些部分
-L## 要建模 Lean 的哪些部分
-**`LTyping`** 模拟 Lean 内核的类型判断 `Σ; ps; Γ ⊢ t : T`。"Lean 接受 t"就是"存在 T 使 `LTyping … t T`"。
-
-**`LEquiv`** 模拟 Lean 内核判断两个 level 相等：**对所有赋值 σ 都算出同一个数**。（内核实际用的是规范化算法，`LEquiv` 是它要达到的标准。）
-### 为什么不直接用 Lean 内核
-用 Lean 内核跑，只能知道**某一条**声明被接受、类型是什么，不能说明**任何** Rocq 接受的声明翻译后都被 Lean 接受。
-
-Lean 4 的内核是用 C++ 写的，不是 Lean 里能拿来推理的对象。具体某一条声明，在内核里跑一下就行；但要证明**一般性**的性质，比如"`c` 在所有 σ 下实例化都合法"（`instLevels_typing`），或者"所有翻译结果都被接受"，就只能先把内核的规则写成定义（`LTyping`、`LEquiv`），再对它做归纳。
-
-所以，只要想要**一般性定理**，说明翻译**为什么**对、对**所有**声明都对，就需要 `LTyping` 和 `LEquiv` 的完整建模。
-### 如果目标只是"每条翻译出来的声明都可靠"
-**第一关：Lean 接受。** 每条声明在 Lean 内核里跑一遍就行，不需要 `LTyping` / `LEquiv`，因为不需要一般性定理，只要说明**这一条**被 Lean 接受。
-
-**第二关：合法翻译**（每处 level 的调整都有 Rocq 约束作依据）。这一关内核帮不上忙，因为它根本不知道 Rocq 是什么。内核能给出 Lean 一侧的类型，但看不到 Rocq 的约束 C，写不出两边 level 的对应关系。
-
-例如，在类型确定不了实例的位置，写 `id.{0}` 和 `id.{5}` 内核都会接受，只有对照 Rocq 才知道哪个合法。
-
-所以**即使只检查一条声明**，这一关也需要模型：
-- `LTerm`、`LLevel`：写出 Lean 一侧的项和 level；
-- `Corr`、`REntailsU`：写出"对应"以及"每个调整都有 Rocq 约束作依据"；
-- 一个验证过的检查器 `checkCorr`：对每条声明实际判断 `Corr` 是否成立。
-
-| 目标    | 第一关（Lean 接受）         | 第二关（合法翻译）               |
-| ----- | -------------------- | ----------------------- |
-| 逐条保证  | 跑 Lean 内核            | `Corr` + `checkCorr`    |
-| 一般性定理 | `LTyping` / `LEquiv` | `Corr`，并对 `RTyping` 做归纳 |
-
+**`LTyping`** 模拟 Lean 内核的类型判断 `Σ; ps; Γ ⊢ t : T`。
+**`LEquiv`** 模拟 Lean 内核判断两个 level 相等：**对所有赋值 σ 都算出同一个数**。
 # 1. Lean 一侧的 level
 ### `LLevel` 用来表达 Lean 里 universe 的层级（`Sort u` 中的 `u`）
 
@@ -244,7 +219,8 @@ theorem instLevels_typing :
 ```
 
 它说明 `const` 规则是合理的：照它算出来的类型，确实是一个合法的类型。我们证明翻译正确时不需要证它，因为这属于 Lean 本身的可靠性。
-- 虽然引用本身永远没问题。它不保证**引用放进上下文**，这个类型和周围对得上。`id.{5}` 自己完全合法，类型是 `∀ A : Sort 6, A → A`；只是把它作用到 `Nat` 上时对不上。
+- **前提**：引理是一般性的；用它说明 `const` 规则合理时，前提是环境良构，即环境里的每条声明 `d` 都能用 `LTyping` 推出 `d.type` 是一个类型（`LTyping Σ d.params [] d.type (.sort u)`）。真实 Lean 里这由内核检查保证；模型里靠假设。
+- 引理保证引用本身永远没问题。它不保证**引用放进上下文**，这个类型和周围对得上。`id.{5}` 自己完全合法，类型是 `∀ A : Sort 6, A → A`；只是把它作用到 `Nat` 上时对不上。
 - **根源在两个系统的差别，以及翻译器怎么弥补它。** Rocq 靠 cumulativity 和约束接受的东西，Lean 要求**完全相等、对所有取值成立**。翻译器必须在实例上做调整，调整失败就会在 `app` / `conv` 这一步暴露出来。
 
 | 情况                 | 例子                                                             | 根源                              | 结果                           |
@@ -253,32 +229,8 @@ theorem instLevels_typing :
 | **没有任何实例能对上**      | `Definition MyNat : Type@{l} := nat`：`l` 是声明自己的 level，没有别的实例可调 | Lean 没有 cumulativity，光调实例不够     | 需要别的办法，比如 `PULift`（包一层）      |
 | **需要 Lean 不知道的约束** | `T : Type@{m} := Type@{l}`，依赖 `l < m`                          | Rocq 是"在约束下成立"，Lean 要求"对所有取值成立" | 需要 R2F-c + PULift 改写；否则翻译不支持 |
 
-
-### 3.3 `Corr` 的常量规则：写成一般形式
-上一轮的 `constPlain` / `constSame` / `constDown` 可以合成一条规则：
-
-```lean
-| constInst :
-    E.levels c = ls →                          -- c 在 Rocq 里用的全局 level：l₁ … lₖ
-    σs = as.map IUniv →                        -- Lean 填的实例都是某个 Rocq 表达式 aᵢ 的像
-    (∀ i, REntailsU C as[i] [⟨ls[i], 0⟩]) →     -- 每个 aᵢ ≤ lᵢ 都有约束作依据
-    Corr E C (.const c) (.const c σs)
-```
-
-读作：Lean 给 `c` 填的每个实例，都必须是某个 Rocq universe 表达式 `aᵢ` 的像，并且 Rocq 的约束能推出 `aᵢ ≤ lᵢ`。
-
-原来的三条规则都是它的特例：
-
-|原规则|对应的 `aᵢ`|依据|
-|---|---|---|
-|`constPlain`（没有 universe）|没有实例，k = 0|不需要|
-|`constSame`（照搬）|`aᵢ = lᵢ`|`lᵢ ≤ lᵢ` 对任何 C 都成立|
-|`constDown`（降）|比 `lᵢ` 小的表达式|要从约束表推出|
-
-项目里还有一条附加要求：如果 `lᵢ` 也是当前声明自己的 level，就必须照搬，这叫 coherence（R3）。在模型里给这条规则多加一个前提就行。
-
 ---
-## 4. 把两边的赋值接起来
+# 把两边的赋值接起来
 Rocq 用 ρ（给每个 RLevel 一个数），Lean 用 σ（给每个参数名一个数）。用 ρ 构造出对应的 σ：
 
 ```lean
@@ -286,33 +238,16 @@ Rocq 用 ρ（给每个 RLevel 一个数），Lean 用 σ（给每个参数名�
 def toLVal (ρ : Val) : LVal := ...
 ```
 
-**核心工具引理**：先翻译再求值，等于先求值。
+引理：先翻译再求值，等于先求值。
+- `toLVal` 定义了单个Level是的赋值是怎么从Rocq到Lean到，`IUniv_eval` 把单个Level到赋值，扩展到了表达式上面。这说明了用了 `toLVal`的Level对应后，我们给Rocq的Level选一个合理的自然数赋值，到了lean那边，我们也有一个合理的赋值？？？？？？
 
 ```lean
 theorem IUniv_eval (h : ρ .set = 0) :
     (IUniv u).eval (toLVal ρ) = u.eval ρ
 ```
 
-证明要用到 `ρ .set = 0`，因为 `Set` 被翻成 `zero`，求值得 0。这正是你在 `Sat` 里写下要求 ①（`Set` 取 0）的原因。
-
-由它可以推出三条 Sort 引理。它们都是 `LEquiv`，也就是对所有 σ 成立：
-
-|引理|内容|是否成立|
-|---|---|---|
-|`∀` 的 Sort|`LEquiv (ISort (prodSort s₁ s₂)) (imax (ISort s₁) (ISort s₂))`| 三种情况都成立|
-|Sort 的类型（Type）|`LEquiv (ISort (succ (.type u))) (.succ (ISort (.type u)))`||
-|Sort 的类型（Prop）|`ISort (succ .prop)` = `Sort 2`，而 Lean 给 `Sort 1`|，需要 `Lower`|
-
-再加上第 3.2 节的代入，还需要一条：
-
-```lean
-theorem inst_eval : (l.inst s).eval σ = l.eval (fun n => (s n).eval σ)
-```
-
-这几条引理**只证一次**，之后每条声明都直接用。
-
 ---
-## 5. 完整流程：以 `idNat` 为例
+# 完整流程：以 `idNat` 为例
 在原来的六步里，把 universe 相关的部分补进去，一共八步。
 ### 第 1 步：输入
 
