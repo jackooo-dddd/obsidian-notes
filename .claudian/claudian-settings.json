@@ -1,7 +1,7 @@
 {
   "userName": "",
-  "permissionMode": "auto",
-  "model": "haiku",
+  "permissionMode": "auto-review",
+  "model": "openai-codex/gpt-6.1-terra",
   "effortLevel": "high",
   "serviceTier": "default",
   "enableAutoTitleGeneration": true,
@@ -36,7 +36,7 @@
     "claude": {
       "installationMethodsByHost": {},
       "wslDistroOverridesByHost": {},
-      "enabled": true,
+      "enabled": false,
       "outputStyle": null,
       "promptSuggestions": false,
       "discoveredOutputStyles": [
@@ -120,22 +120,250 @@
       ]
     },
     "codex": {
-      "enabled": false,
+      "enabled": true,
       "safeMode": "workspace-write",
       "cliPath": "",
       "cliPathsByHost": {},
       "modelAliases": {},
-      "visibleModels": [],
-      "enableUltraEffort": false,
+      "visibleModels": [
+        "gpt-6.1-terra",
+        "gpt-6.1-sol",
+        "gpt-6-sol",
+        "gpt-6-astra",
+        "gpt-6-luna"
+      ],
+      "enableUltraEffort": true,
       "responseStyle": "pragmatic",
       "responseVerbosity": "default",
       "reasoningSummary": "detailed",
       "environmentVariables": "",
-      "environmentHash": "",
-      "sessionEnvironmentHash": "",
+      "environmentHash": "runtime-input:v1:ed54f4f5238abeec7f65a5da1e468c9a639e157a7d1c7753b53f54ba1196e8a0",
+      "sessionEnvironmentHash": "runtime-input:v1:cf4a613a63a895356fbc95544817979656506c93b9fb3fe1c76833522e1c19fc",
       "installationMethodsByHost": {},
       "wslDistroOverridesByHost": {},
-      "selectedModels": []
+      "selectedModels": [
+        {
+          "model": "gpt-6.1-terra",
+          "displayName": "GPT-6.1 Terra",
+          "description": "Efficient model that excels at visual understanding and computer use.",
+          "supportedReasoningEfforts": [
+            {
+              "value": "low",
+              "description": "Fast responses with lighter reasoning"
+            },
+            {
+              "value": "medium",
+              "description": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "value": "high",
+              "description": "Greater reasoning depth for complex problems"
+            },
+            {
+              "value": "xhigh",
+              "description": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "value": "max",
+              "description": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "value": "ultra",
+              "description": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultReasoningEffort": "low",
+          "serviceTiers": [
+            {
+              "id": "priority",
+              "name": "Fast",
+              "description": "1.5x speed"
+            }
+          ],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": true
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "displayName": "GPT-6.1 Sol",
+          "description": "Previous generation model for coding and everyday work.",
+          "supportedReasoningEfforts": [
+            {
+              "value": "low",
+              "description": "Fast responses with lighter reasoning"
+            },
+            {
+              "value": "medium",
+              "description": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "value": "high",
+              "description": "Greater reasoning depth for complex problems"
+            },
+            {
+              "value": "xhigh",
+              "description": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "value": "max",
+              "description": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "value": "ultra",
+              "description": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultReasoningEffort": "low",
+          "serviceTiers": [
+            {
+              "id": "priority",
+              "name": "Fast",
+              "description": "2x speed, increased usage"
+            }
+          ],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-6-astra",
+          "displayName": "GPT-6 Astra",
+          "description": "Previous generation model for complex coding and professional work.",
+          "supportedReasoningEfforts": [
+            {
+              "value": "low",
+              "description": "Fast responses with lighter reasoning"
+            },
+            {
+              "value": "medium",
+              "description": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "value": "high",
+              "description": "Greater reasoning depth for complex problems"
+            },
+            {
+              "value": "xhigh",
+              "description": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "value": "max",
+              "description": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "value": "ultra",
+              "description": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultReasoningEffort": "medium",
+          "serviceTiers": [
+            {
+              "id": "priority",
+              "name": "Fast",
+              "description": "2x speed, increased usage"
+            }
+          ],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-6-sol",
+          "displayName": "GPT-6 Sol",
+          "description": "Legacy model for coding and everyday work.",
+          "supportedReasoningEfforts": [
+            {
+              "value": "low",
+              "description": "Fast responses with lighter reasoning"
+            },
+            {
+              "value": "medium",
+              "description": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "value": "high",
+              "description": "Greater reasoning depth for complex problems"
+            },
+            {
+              "value": "xhigh",
+              "description": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "value": "max",
+              "description": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "value": "ultra",
+              "description": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultReasoningEffort": "medium",
+          "serviceTiers": [
+            {
+              "id": "priority",
+              "name": "Fast",
+              "description": "1.5x speed"
+            }
+          ],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-6-luna",
+          "displayName": "GPT-6 Luna",
+          "description": "Fast and affordable model for easier tasks.",
+          "supportedReasoningEfforts": [
+            {
+              "value": "low",
+              "description": "Fast responses with lighter reasoning"
+            },
+            {
+              "value": "medium",
+              "description": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "value": "high",
+              "description": "Greater reasoning depth for complex problems"
+            },
+            {
+              "value": "xhigh",
+              "description": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "value": "max",
+              "description": "Maximum reasoning depth for the hardest problems"
+            }
+          ],
+          "defaultReasoningEffort": "medium",
+          "serviceTiers": [
+            {
+              "id": "priority",
+              "name": "Fast",
+              "description": "1.5x speed"
+            }
+          ],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        }
+      ]
     },
     "deepseek": {
       "installationMethodsByHost": {},
@@ -195,21 +423,26 @@
       "selectedModels": []
     }
   },
-  "settingsProvider": "claude",
+  "settingsProvider": "codex",
   "lastSelectedChatModel": {
-    "providerId": "claude",
-    "model": "opus"
+    "providerId": "codex",
+    "model": "openai-codex/gpt-6.1-terra"
   },
   "inlineEditModel": null,
   "savedProviderModel": {
-    "claude": "haiku"
+    "claude": "haiku",
+    "codex": "openai-codex/gpt-6.1-terra"
   },
   "savedProviderEffort": {
-    "claude": "high"
+    "claude": "high",
+    "codex": "high"
   },
-  "savedProviderServiceTier": {},
+  "savedProviderServiceTier": {
+    "codex": "default"
+  },
   "savedProviderPermissionMode": {
-    "claude": "auto"
+    "claude": "auto",
+    "codex": "auto-review"
   },
   "pendingProviderSessionInvalidations": {},
   "enableAutoScroll": true,

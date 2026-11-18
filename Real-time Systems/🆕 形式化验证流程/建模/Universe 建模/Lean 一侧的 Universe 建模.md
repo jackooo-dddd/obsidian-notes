@@ -138,7 +138,7 @@ def genParams (d : RDecl) : List String := (levelsOf d).map ("u_" ++ ·)
 
 参数列表的作用：
 1. **对调用者**：规定实例的个数和顺序。引用 `F` 时，必须恰好给出两个实例，并按列表顺序填写：`F.{a, b}` 中，`a` 对应 `u_l`，`b` 对应 `u_m`。Lean 再按位置把参数代换成实例。
-2. **对翻译正确性**：列表的第 i 个参数对应 Rocq 的第 i 个全局 level。所以 `constInst` 检查调用者填的第 i 个实例时，知道该拿它和哪个 Rocq level 比较。
+2. **对翻译正确性**：列表的第 i 个参数对应 Rocq 的第 i 个全局 level。 检查调用者在 Lean 声明里填的第 i 个实例时，知道该拿它和哪个 Rocq level 比较。
 ## 建模 Lean 声明引用常量时的实例代入
 
 ```lean
@@ -230,7 +230,7 @@ theorem instLevels_typing :
 | **需要 Lean 不知道的约束** | `T : Type@{m} := Type@{l}`，依赖 `l < m`                          | Rocq 是"在约束下成立"，Lean 要求"对所有取值成立" | 需要 R2F-c + PULift 改写；否则翻译不支持 |
 
 ---
-# 把两边的赋值接起来
+# 把两边的赋值接起来 ？？？？？？
 Rocq 用 ρ（给每个 RLevel 一个数），Lean 用 σ（给每个参数名一个数）。用 ρ 构造出对应的 σ：
 
 ```lean
@@ -246,159 +246,10 @@ theorem IUniv_eval (h : ρ .set = 0) :
     (IUniv u).eval (toLVal ρ) = u.eval ρ
 ```
 
----
-# 完整流程：以 `idNat` 为例
-在原来的六步里，把 universe 相关的部分补进去，一共八步。
-### 第 1 步：输入
+在 Rocq 中，假设声明 `id` 使用了一个全局 Universe Level `l`。所有引用 `id` 的地方共享同一个 `l`，它没有固定的数值，但必须满足全局约束表 `C`。Rocq 要求声明在**所有满足 C 的 Universe 赋值下**都合法。
 
-|东西|内容|
-|---|---|
-|Rocq 声明|`idNat : nat → nat := fun x => id nat x`|
-|它依赖的 Rocq 声明|`id : ∀ A : Type@{l}, A → A`，用到全局 level `l`|
-|约束表|`C₀ = [.lt .set (.global "l")]`|
-|翻译器给出的 Lean 声明|`idNat : Nat → Nat := fun x => id.{0} Nat x`，参数 `[]`|
-|已经翻译好的依赖|`id.{u_l} : ∀ A : Sort (u_l + 1), A → A`|
-
-### 第 2 步：抽象成模型里的对象
-除了项本身，universe 也要转换：
-- IR 的 `SortIR.type (Array LevelExpr)` → `RUniv`；
-- `IR.Level` → `RLevel`；
-- `Lean.Level` → `LLevel`。
-
-```lean
-def E₀ : REnv := ⟨fun c => if c = "id" then [.global "l"] else []⟩   -- 每个常量用到的全局 level
-
-def idR : RDecl := { type := .prod (.sort (.type [⟨.global "l", 0⟩])) (.prod (.rel 0) (.rel 1)), … }
-def idL : LDecl := { params := ["u_l"],
-                     type := .forallE (.sort (.succ (.param "u_l"))) (.forallE (.bvar 0) (.bvar 1)), … }
-
-def idNatR : RTerm :=
-  .lam (.const "nat") (.app (.app (.const "id") (.const "nat")) (.rel 0))
-def idNatL : LTerm :=
-  .lam (.const "nat" []) (.app (.app (.const "id" [.zero]) (.const "nat" [])) (.bvar 0))
-```
-
-### 第 3 步：检查依赖是怎么翻译的
-`idNat` 用到了 `id`，所以先要确认 `id` 本身翻译得对：
-- **参数**：`idL.params = genParams idR = ["u_l"]`
-- **类型**：`Type@{l}` 翻成 `Sort (u_l + 1)`，也就是 `ISort (.type [⟨l, 0⟩])`
-
-写成命题：
-
-```lean
-theorem id_params : idL.params = genParams idR := rfl
-theorem id_type   : Corr E₀ C₀ idR.type idL.type := …   -- Sort 用 ISort 翻译，其余逐节点
-```
-
-只有这一步做对了，后面"把 `u_l` 换成 `0`"才有意义。
-### 第 4 步：检查 `idNat` 自己的参数
-`idNat` 不用全局 level：
-
-```lean
-theorem idNat_params : idNatLDecl.params = genParams idNatRDecl := rfl   -- 都是 []
-```
-
-### 第 5 步：找出改动，写出义务
-
-|位置|逐字翻译|Lean 的答案|改动|义务|
-|---|---|---|---|---|
-|`id` 的实例|`[param u_l]`|`[zero]`|`zero = IUniv [⟨set, 0⟩]`，从 `l` 降到 `Set`|`REntailsU C₀ [⟨set,0⟩] [⟨l,0⟩]`|
-|其余位置|相同|相同|无|无|
-
-注意第二列到第三列的推理：Lean 填的是 `zero`，要先找出它是哪个 Rocq 表达式的像（`Set`），才能写出义务。这一步对应 `constInst` 规则的第二个前提 `σs = as.map IUniv`。
-### 第 6 步：证明义务
-两个命题：
-
-```lean
--- 约束表一致：给出一个具体的赋值
-theorem C₀_consistent : Consistent C₀ :=
-  ⟨fun | .set => 0 | _ => 1, by simp [Sat, C₀, RCon.holds]⟩
-
--- 义务：Set ≤ l
-theorem h : REntailsU C₀ [⟨.set, 0⟩] [⟨.global "l", 0⟩] := by
-  intro ρ ⟨hset, hC⟩
-  have := hC (.lt .set (.global "l")) (by simp [C₀])
-  simp [RUniv.eval, RLevelExpr.eval, RCon.holds] at *
-  omega
-```
-
-### 第 7 步：第二关，拼出 `Corr`
-
-```lean
-theorem idNat_corr : Corr E₀ C₀ idNatR idNatL :=
-  .lam (.constInst rfl rfl (by simp))            -- nat：没有实例
-       (.app (.app (.constInst rfl rfl (fun | 0 => h))   -- id ↦ id.{0}，交出 h
-                   (.constInst rfl rfl (by simp)))       -- nat
-             .rel)                                       -- x
-```
-
-### 第 8 步：第一关，Lean 类型检查里的 universe 部分
-逐步核对 `id.{0} Nat x`：
-
-**取出 `id.{0}` 的类型**：用 3.2 节的 `const` 规则，把 `u_l` 换成 `zero`：
-
-```
-∀ A : Sort (u_l + 1), A → A    ──[u_l ↦ zero]──→    ∀ A : Sort (zero + 1), A → A
-```
-
-**`id.{0} Nat`**：
-- 参数要求：`Sort (succ zero)`
-- `Nat` 的类型：`Sort (succ zero)`
-- 需要 `LEquiv (succ zero) (succ zero)`：两边一样，对任何 σ 都成立
-
-**`id.{0} Nat x`**：参数要求 `Nat`，`x : Nat`
-
-**结果** `Nat`，和声明的返回类型一致
-
-作为对照，照搬 `id.{u_l}` 的失败也可以写成一个命题：
-
-```lean
-theorem naive_fails : ¬ LEquiv (.succ .zero) (.succ (.param "u_l")) := by
-  intro h; have := h (fun _ => 1); simp [LLevel.eval] at this   -- σ u_l = 1 时，1 ≠ 2
-```
-
-这就是"Lean 直接报错"在模型里的样子：它要求对**所有** σ 相等，而 `σ u_l = 1` 就是一个反例。
-
----
-## 6. 单条声明要证的命题
-把上面所有命题合在一起，"`idNat` 的翻译是正确的"可以写成一个结构：
-
-```lean
-structure DeclOK (E : REnv) (C : Constraints) (Σ : LEnv) (dR : RDecl) (dL : LDecl) : Prop where
-  consistent : Consistent C                         -- 约束表一致
-  params     : dL.params = genParams dR             -- R2：参数列表正确
-  typeCorr   : Corr E C dR.type dL.type             -- 类型是合法翻译
-  bodyCorr   : Corr E C dR.body dL.body             -- 定义体是合法翻译（义务 h 在这里面）
-  typeOK     : ∃ u, LTyping Σ [] dL.type (.sort u)  -- 第一关：类型是类型
-  bodyOK     : LTyping Σ [] dL.body dL.type         -- 第一关：定义体有这个类型
-```
-
-每个命题的作用：
-
-|命题|说的是什么|universe 相关的部分|
-|---|---|---|
-|`consistent`|约束表不矛盾|排除空洞的 `REntails`|
-|`params`|Lean 的参数正好是 Rocq 用到的全局 level|R2 一般化|
-|`typeCorr` / `bodyCorr`|是合法翻译|Sort 用 `ISort` 翻译；实例的每处调整都有 `REntailsU` 依据|
-|`typeOK` / `bodyOK`|Lean 接受|Sort 比较用 `LEquiv`，对所有 σ；引用时代入实例|
-|（依赖的 `DeclOK`）|用到的常量本身翻译正确|例如 `id` 的参数是 `[u_l]`|
-
-真实项目里，`bodyOK` 由 Lean kernel 实际检查；`bodyCorr` 里的实例义务，对应审计工具 `check_universe_args` 做的检查。
-
-最后，固定赋值时还有一个直接的推论，正是"Lean 遵守 Rocq 约束"的数值意义：
-
-```lean
-example : ∀ ρ, Sat ρ C₀ → (LLevel.zero).eval (toLVal ρ) ≤ ρ (.global "l")
-```
-
-读作：在 Rocq 任何一个允许的取值下，Lean 给 `id` 填的 level 都不超过 Rocq 里 `id` 的 level。它由 `h` 和 `IUniv_eval` 直接推出。
-
----
-## 小结
-> - 除了 Rocq 一侧，universe 建模还有四块：
->     - **Lean 的 level**：`LLevel`、`eval`、`LEquiv`。Lean 要求对所有 σ 都相等。
->     - **翻译 R1**：`ILevel` / `IUniv` / `ISort`。注意 level 的像和 Sort 的像差 1。
->     - **声明参数和实例**：`genParams`（R2），`instLevels`，以及合成后的 `constInst` 规则。
->     - **赋值对应**：`toLVal`，加上核心引理 `IUniv_eval`，它要用到 `Sat` 里的"`Set` 取 0"。
-> - 单条声明的流程：输入 → 抽象 → 检查依赖的参数和类型 → 检查自己的参数 → 找改动、写义务 → 证明义务（含 `Consistent`）→ 拼 `Corr` → Lean 类型检查（实例代入 + `LEquiv`）。
-> - 最后合成一个命题 `DeclOK`：约束一致、参数正确、类型和定义体都是合法翻译、Lean 接受。universe 的义务 `h` 就在 `bodyCorr` 里面。
+翻译到 Lean 后，全局 Level `l` 转换为 Universe Parameter `u_l`，每次引用 id 时独立指定 `u_l`，例如 `id.{0}`、`id.{1}`、`id.{2}`。同时，Lean Kernel 要求这个声明对 `u_l` 的所有实例化都成立。因此，这种翻译在 Universe 参数的适用范围上提出了更强的要求：原本只需要在 C 约束下合法的声明，现在需要在 Lean 不受 C 限制的参数取值下也合法。
+####  取 `σ := ρ` 就能恢复原声明
+- **任取**一个满足  Rocq 约束表 C 的赋值 ρ。
+- 利用 `ρ` 构造 Lean 的 Universe 参数赋值 `σ := toLVal(ρ)`
+- 对每个全局 Level `l`，规定`σ(u_l) = ρ(l)`。在这个 σ 下，翻译后每个 Sort 的值，都等于 Rocq 原来的 Sort 在 ρ 下的值。
